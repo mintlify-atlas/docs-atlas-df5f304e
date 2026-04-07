@@ -1,0 +1,75 @@
+---
+title: 'Changelog'
+description: 'Version history for nRFBox firmware, from the original Arduino-based V1 through the current ESP32-based releases.'
+---
+
+For the full project history, source code, and release assets, see the [GitHub repository](https://github.com/cifertech/nRFBox) and the [project wiki](https://github.com/cifertech/nRFBox/wiki).
+
+## Hardware generations
+
+nRFBox has gone through three hardware revisions:
+
+| Version | Platform | Status |
+|---|---|---|
+| V1 | Arduino | No longer maintained |
+| V2 | ESP32 | Firmware actively updated; pre-compiled binaries available |
+| V3 | ESP32 | Latest hardware design, referenced in README |
+
+V1 was the original Arduino-based implementation. V2 migrated to the ESP32, gaining WiFi, BLE, and expanded memory. V3 is the latest PCB revision, also ESP32-based, incorporating hardware refinements over V2.
+
+## Firmware version history
+
+Pre-compiled binaries (`.bin` files targeting the ESP32 `node32s` board) are available in the `Pre-compiled Bin/` directory of the repository. The following versions are present:
+
+<Note>
+No explicit changelog file exists in the repository. The descriptions below reflect the version progression factually. Refer to the [GitHub wiki](https://github.com/cifertech/nRFBox/wiki) and commit history for detailed per-version changes.
+</Note>
+
+### V2.7.2 — latest recommended release
+
+`nRFBox_V2-7-2.ino.node32s.bin`
+
+The most recent pre-compiled release. Recommended for all users flashing directly to hardware. Use the flash tool and partition binary provided in the `Flash File/` directory.
+
+### V2.5.0
+
+`nRFBox_V2-5-0.ino.node32s.bin`
+
+An intermediate release in the V2 firmware series, reflecting continued development and refinement between V2.2.1 and V2.7.2.
+
+### V2.2.1
+
+`nRFBox_V2-2-1.ino.node32s.bin`
+
+An incremental release in the V2 series.
+
+### V2.1.1
+
+`nRFBox_V2-1-1.ino.node32s.bin`
+
+An early update to the initial V2 ESP32 release.
+
+### V2.0.0 — initial ESP32 release
+
+`nRFBox_V2-0-0.ino.node32s.bin`
+
+The first firmware release for the ESP32-based nRFBox V2 hardware. Introduced the core feature set: Scanner, Analyzer, Jammer, BLE Jammer, BLE Spoofer, and Sour Apple.
+
+## Flashing
+
+Pre-compiled binaries can be flashed using the Espressif Flash Download Tool (`flash_download_tool_3.9.5.zip`) included in the `Flash File/` directory, along with the required `nRFBOX.partitions.bin` partition table and `platform.txt` configuration file. See the [project wiki](https://github.com/cifertech/nRFBox/wiki) for flashing instructions.
+
+OTA (over-the-air) firmware updates from an SD card are supported in V2 firmware via the Settings menu. Place `firmware.bin` on the SD card root and select "Update Firmware" from the on-device settings.
+
+## Acknowledgements
+
+nRFBox builds on the following open-source projects and libraries:
+
+| Project | Author / Source |
+|---|---|
+| [Poor Man's 2.4 GHz Scanner](https://forum.arduino.cc/t/poor-mans-2-4-ghz-scanner/54846) | Arduino forum |
+| [arduino\_oled\_menu](https://github.com/upiir/arduino_oled_menu) | upiir |
+| [nRF24L01-WiFi-Jammer](https://github.com/hugorezende/nRF24L01-WiFi-Jammer) | hugorezende |
+| [Universal-RC-system](https://github.com/alexbeliaev/Universal-RC-system/tree/master) | alexbeliaev |
+| [AppleJuice](https://github.com/ECTO-1A/AppleJuice) | ECTO-1A |
+| [ESP32-Sour-Apple](https://github.com/RapierXbox/ESP32-Sour-Apple) | RapierXbox |

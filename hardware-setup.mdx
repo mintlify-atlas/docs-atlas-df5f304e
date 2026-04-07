@@ -1,0 +1,114 @@
+---
+title: "Hardware setup"
+description: "Assemble your nRFBox: required components, GPIO pin assignments, wiring guide, and PCB options."
+---
+
+## Required components
+
+| Component | Quantity | Notes |
+|---|---|---|
+| ESP32 Wroom32U | 1 | External antenna variant recommended for better RF performance |
+| NRF24L01 module | 3 | Standard or PA+LNA variant; all share the same SPI bus |
+| SSD1306 OLED display | 1 | 128×64 pixels, I2C interface |
+| NeoPixel RGB LED | 1 | Single addressable LED (WS2812B-compatible) |
+| Push buttons | 5 | Tactile momentary switches for Up, Down, Left, Right, Select |
+| SD card slot | 1 | Optional — required for OTA firmware updates from SD card |
+| PCB or breadboard | 1 | Custom Gerber files available; see PCB option below |
+| Power supply | 1 | 3.3V regulated; USB power via ESP32 dev board is typical |
+
+## Pin assignments
+
+All GPIO assignments are defined in `nRFBox/config.h`.
+
+### Navigation buttons
+
+| Function | GPIO |
+|---|---|
+| Up | 26 |
+| Select | 33 |
+| Down | 32 |
+| Right | 27 |
+| Left | 25 |
+
+All buttons are configured as `INPUT_PULLUP` — connect one side to the assigned GPIO and the other to GND.
+
+### NRF24L01 modules
+
+Three NRF24L01 modules share the same SPI bus (SCK, MISO, MOSI) but have separate CE and CSN pins for independent control.
+
+| Module | CE pin | CSN pin |
+|---|---|---|
+| A | 5 | 17 |
+| B | 16 | 4 |
+| C | 15 | 2 |
+
+**Shared SPI pins:**
+
+| Signal | GPIO |
+|---|---|
+| SCK | 18 |
+| MISO | 19 |
+| MOSI | 23 |
+
+### Display and LED
+
+| Component | Interface | GPIO / Address |
+|---|---|---|
+| SSD1306 OLED (128×64) | I2C (hardware) | Default I2C bus (SDA/SCL) |
+| NeoPixel RGB LED | Digital out | GPIO 14 |
+
+### SD card (optional)
+
+| Signal | GPIO |
+|---|---|
+| CS | 5 |
+
+The firmware file for OTA updates must be named `/firmware.bin` on the SD card root.
+
+<Note>
+  The SD card CS pin (GPIO 5) is shared with NRF module A's CE pin in the default config. If you use the SD card OTA feature, ensure only one peripheral is active at a time. The firmware handles this by only accessing the SD card from the Settings menu.
+</Note>
+
+## Assembly steps
+
+<Steps>
+  <Step title="Prepare the ESP32">
+    Use an ESP32 Wroom32U dev board (Node32S or equivalent). Confirm it programs correctly over USB before attaching peripherals — flash a basic blink sketch to verify the connection.
+  </Step>
+  <Step title="Wire the SPI bus">
+    Connect SCK (GPIO 18), MISO (GPIO 19), and MOSI (GPIO 23) to the corresponding pins on all three NRF24L01 modules. These three signals are shared across all modules.
+  </Step>
+  <Step title="Connect NRF24L01 modules">
+    Wire each module's CE and CSN pins individually per the table above. Also connect VCC to 3.3V and GND to ground. Add a 10µF decoupling capacitor across VCC and GND on each module to reduce power supply noise.
+  </Step>
+  <Step title="Connect the OLED display">
+    Wire the SSD1306 OLED's SDA and SCL to the ESP32's default I2C pins. The U8g2 driver uses the hardware I2C peripheral — no additional configuration is required.
+  </Step>
+  <Step title="Connect the NeoPixel LED">
+    Wire the NeoPixel data-in pin to GPIO 14. Connect VCC to 3.3V (or 5V if your LED supports it) and GND to ground.
+  </Step>
+  <Step title="Wire the navigation buttons">
+    Connect one terminal of each button to its assigned GPIO and the other terminal to GND. The firmware enables internal pull-up resistors, so no external resistors are needed.
+  </Step>
+  <Step title="Verify connections before power-on">
+    Double-check that no SPI lines are shorted and that all VCC/GND connections are correct. With three radio modules active, peak current draw can be significant — use a stable 3.3V supply capable of at least 500mA.
+  </Step>
+</Steps>
+
+## PCB option
+
+A custom PCB is available for a cleaner build. The repository includes:
+
+- **Schematic** — `Schematic/nRFBOX-Schematic.jpg` for the full circuit diagram
+- **Gerber files** — Available in the `PCB/` directory for ordering from a PCB manufacturer
+- **BOM** — `BOM.xlsx` lists all required components with suggested part numbers
+
+Using the PCB eliminates point-to-point wiring, improves signal integrity for the NRF modules, and provides a stable mounting solution for the OLED and buttons.
+
+<Warning>
+  Running all three NRF24L01 modules simultaneously at maximum PA level (`RF24_PA_MAX`) draws significant current. Powering the board from a weak USB port or an undersized regulator may cause instability, intermittent radio failures, or unexpected resets. Use a dedicated 3.3V regulator rated for at least 500mA, and add bypass capacitors (100nF ceramic + 10µF electrolytic) close to each module's VCC pin.
+</Warning>
+
+<Tip>
+  If you experience unreliable radio behavior, try powering the ESP32 and the three NRF modules from separate 3.3V regulators, or add a bulk capacitor (470µF or larger) across the shared 3.3V rail.
+</Tip>

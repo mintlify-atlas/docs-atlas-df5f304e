@@ -1,0 +1,135 @@
+---
+title: "Wi-Fi Tools"
+description: "Scan for nearby Wi-Fi networks and send 802.11 deauthentication frames to disconnect clients from a target access point."
+---
+
+The nRFBox provides two Wi-Fi modes implemented in `wifi.cpp` using the ESP32's built-in Wi-Fi radio. Both modes display results on the 128×64 OLED with UP/DOWN navigation and a detail view accessible via the RIGHT button.
+
+<Warning>
+  Sending deauthentication frames against networks you do not own is illegal under the Computer Fraud and Abuse Act (US), the Computer Misuse Act (UK), and equivalent laws worldwide. Only use the Deauther on networks and devices you control, in a private or shielded environment, with explicit authorization.
+</Warning>
+
+<CardGroup cols={2}>
+  <Card title="Wi-Fi Scanner" icon="magnifying-glass">
+    Scans and lists nearby Wi-Fi networks with SSID and RSSI. Tap RIGHT for full details including BSSID and channel.
+  </Card>
+  <Card title="Deauther" icon="ban">
+    Targets a selected access point and sends 802.11 deauthentication frames at 10 frames/second, with automatic channel tracking.
+  </Card>
+</CardGroup>
+
+---
+
+## Wi-Fi Scanner
+
+`namespace WifiScan` sets the ESP32 into station mode and runs a passive scan using the Arduino `WiFi` library.
+
+### How it works
+
+<Steps>
+  <Step title="Initialize Wi-Fi">
+    `WiFi.mode(WIFI_STA)` and `WiFi.disconnect()` prepare the radio for scanning. A dot animation plays on the OLED during startup.
+  </Step>
+  <Step title="Scan for networks">
+    `WiFi.scanNetworks()` runs a blocking scan. If it completes within the 2-second timeout (`scanTimeout = 2000 ms`), the results are stored and displayed.
+  </Step>
+  <Step title="Browse the list">
+    Up to 5 networks are shown per page. Each row displays the SSID (first 7 characters) and RSSI. Navigate with **UP** / **DOWN**.
+  </Step>
+  <Step title="View network details">
+    Press **RIGHT** to open the detail view for the selected network. The display shows SSID, BSSID, RSSI, and channel. Press **LEFT** to return to the list.
+  </Step>
+</Steps>
+
+### Detail view fields
+
+| Field | Source |
+|---|---|
+| SSID | `WiFi.SSID(index)` |
+| BSSID | `WiFi.BSSIDstr(index)` |
+| RSSI | `WiFi.RSSI(index)` dBm |
+| Channel | `WiFi.channel(index)` |
+
+---
+
+## Deauther
+
+`namespace Deauther` sends raw 802.11 deauthentication frames directly via `esp_wifi_80211_tx()`, targeting a selected access point's broadcast address.
+
+### Deauth frame structure
+
+```cpp
+uint8_t deauth_frame_default[26] = {
+    0xC0, 0x00,                         // type, subtype (deauth)
+    0x00, 0x00,                         // duration
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // receiver (broadcast)
+    0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, // source (AP BSSID)
+    0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, // BSSID (AP)
+    0x00, 0x00,                         // sequence number
+    0x01, 0x00                          // reason code
+};
+```
+
+Before each transmission, bytes 10–15 (source) and 16–21 (BSSID) are overwritten with the target AP's BSSID. The receiver address remains `0xFF:FF:FF:FF:FF:FF` (broadcast), which deauthenticates all clients simultaneously.
+
+### How it works
+
+<Steps>
+  <Step title="Scan and sort networks">
+    On startup, `scanNetworks()` runs a full scan and sorts results by RSSI descending using `qsort()` with a comparator that returns `ap2->rssi - ap1->rssi`. The strongest signal appears first.
+  </Step>
+  <Step title="Select a target">
+    Use **UP** / **DOWN** to highlight a network. Each row shows SSID (7 chars) and RSSI. Press **RIGHT** to enter the attack detail view.
+  </Step>
+  <Step title="Review target details">
+    The attack detail view shows SSID, authentication type (`OPEN`, `WPA-PSK`, `WPA2-PSK`, `WPA/WPA2`, or `Unknown`), and the current attack status. Press **RIGHT** to start or stop the attack.
+  </Step>
+  <Step title="Send deauth frames">
+    While the attack is running, one deauth frame is sent every 100 ms (`currentMillis - last_packet_time >= 100`). The ESP32 is in AP mode (`WIFI_MODE_AP`) with maximum TX power (`esp_wifi_set_max_tx_power(82)`).
+  </Step>
+  <Step title="Track channel changes">
+    Every 15 seconds, `checkApChannel()` re-scans to detect if the target AP has changed channels (e.g., due to DFS). If the channel changed, the AP config is updated accordingly.
+  </Step>
+</Steps>
+
+### Attack detail view fields
+
+| Field | Value |
+|---|---|
+| Status | Running / Stopped |
+| Pkts | Total deauth frames sent (`packet_count`) |
+| Succ | Success rate as a percentage (`success_count / packet_count * 100`) |
+
+### Safety stops
+
+The attack halts automatically under two conditions:
+
+| Condition | Threshold | Action |
+|---|---|---|
+| Low heap memory | Free heap < 80 KB | Stops attack, calls `esp_wifi_stop()` |
+| Consecutive failures | > 10 in a row | Calls `resetWifi()` to restart the Wi-Fi stack |
+
+### NeoPixel feedback
+
+| State | NeoPixel color |
+|---|---|
+| Attack running | Off (code calls `"orange"` but no orange case exists in `setNeoPixelColour()`) |
+| Attack stopped | Off |
+
+<Note>
+  The Deauther calls `setNeoPixelColour(attack_running ? "orange" : "0")`. However, `neopixel.cpp` has no handler for the string `"orange"`, so the LED remains off during an active attack. This is a known source-level omission.
+</Note>
+
+### Button mapping
+
+| Button | Context | Action |
+|---|---|---|
+| UP | List view | Move selection up |
+| DOWN | List view | Move selection down |
+| RIGHT | List view | Enter attack detail view |
+| RIGHT | Detail view | Toggle attack on / off |
+| LEFT | Detail view | Stop attack and return to list |
+
+<Note>
+  Deauthentication attacks are most effective against networks using WPA/WPA2-PSK. Open networks and networks using 802.11w (Management Frame Protection) will not be reliably disconnected, as MFP-capable clients ignore unauthenticated deauth frames.
+</Note>

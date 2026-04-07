@@ -1,0 +1,79 @@
+---
+title: "Introduction"
+description: "nRFBox is an open-source ESP32-powered wireless toolkit for scanning, jamming, spoofing, and analyzing BLE, Wi-Fi, and 2.4GHz networks."
+---
+
+## What is nRFBox?
+
+nRFBox is an open-source, handheld wireless toolkit designed to explore, analyze, and interact with wireless communication protocols across the 2.4GHz spectrum. It combines an **ESP32 Wroom32U** microcontroller with **three NRF24L01 radio modules**, a **128×64 SSD1306 OLED display**, a **NeoPixel RGB LED**, and **five navigation buttons** into a compact, self-contained device.
+
+With its icon-based grid menu and a single-button select interaction, nRFBox provides a practical platform for wireless security research, protocol analysis, and RF experimentation — all without a laptop.
+
+## Hardware versions
+
+nRFBox has evolved through three hardware generations:
+
+| Version | Platform | Notes |
+|---|---|---|
+| V1 | Arduino-based | Original prototype; limited processing power and no BLE support |
+| V2 | ESP32-based | First ESP32 revision; introduced BLE, Wi-Fi, and multi-radio support |
+| V3 | ESP32-based | Current version; refined PCB, improved power handling, updated firmware |
+
+All pre-compiled firmware binaries and the current source code target the V2/V3 ESP32 platform.
+
+## Menu modes
+
+nRFBox presents 10 operational modes (plus About and Settings) in a scrollable 3-column icon grid. Navigate with the directional buttons and press **Select** to enter a mode.
+
+| # | Mode | Description |
+|---|---|---|
+| 1 | **Scanner** | Scans the 2.4GHz band to detect active channels and nearby devices |
+| 2 | **Analyzer** | Analyzes detected signals and displays detailed channel activity |
+| 3 | **WLAN Jammer** | Jams wireless communication on selected 2.4GHz channels |
+| 4 | **Proto Kill** | Disrupts multiple wireless protocols simultaneously |
+| 5 | **BLE Jammer** | Targets Bluetooth Low Energy advertising channels |
+| 6 | **BLE Spoofer** | Simulates BLE device advertisements for testing and research |
+| 7 | **Sour Apple** | Sends spoofed Apple BLE proximity pairing notifications |
+| 8 | **BLE Scan** | Lists nearby BLE devices and their advertisement data |
+| 9 | **WiFi Scan** | Scans for visible and hidden Wi-Fi networks with extended details |
+| 10 | **Deauther** | Sends Wi-Fi deauthentication frames to disrupt client connections |
+
+## Functionality status
+
+| Feature | Status | Reliability | Notes |
+|---|---|---|---|
+| Scanner | Stable | High | Occasional misses in high-interference environments |
+| Analyzer | Stable | High | Additional updates planned for improved accuracy |
+| WLAN Jammer | Stable | High | Effectiveness varies by device type and signal strength |
+| BLE Jammer | Stable | High | Disrupts BLE devices inconsistently across BLE variants |
+| BLE Spoofer | Stable | Low | Limited compatibility; best for controlled testing |
+| Sour Apple | Stable | Low | Effective only under specific conditions; further tuning required |
+
+## Key libraries
+
+nRFBox is built on the Arduino/ESP32 ecosystem and relies on the following libraries:
+
+- **RF24** — NRF24L01 radio module driver (all scanning, jamming, and analyzer modes)
+- **U8g2lib** — SSD1306 OLED display rendering
+- **Adafruit_NeoPixel** — RGB status LED control
+- **BLEDevice / BLEUtils / BLEServer** — Bluetooth Low Energy functionality (ESP-IDF BLE stack)
+- **esp_wifi / esp_wifi_types** — Wi-Fi scanning and deauthentication frame injection
+- **SD / Update** — SD card OTA firmware updates
+
+<Warning>
+  nRFBox is intended for security research, authorized penetration testing, and educational use only. Jamming or spoofing wireless signals on networks and devices you do not own or have explicit permission to test is illegal in most jurisdictions. Always obtain proper authorization before using any disruptive features. The authors and contributors bear no responsibility for misuse.
+</Warning>
+
+## Next steps
+
+<CardGroup cols={3}>
+  <Card title="Hardware setup" icon="microchip" href="/hardware-setup">
+    Assemble your nRFBox: components, pin wiring, and PCB options
+  </Card>
+  <Card title="Flashing firmware" icon="bolt" href="/flashing-firmware">
+    Upload firmware via Arduino IDE or pre-compiled binary with esptool
+  </Card>
+  <Card title="Scanner & Analyzer" icon="signal" href="/features/scanner-analyzer">
+    Explore the 2.4GHz scanning and signal analysis modes in detail
+  </Card>
+</CardGroup>

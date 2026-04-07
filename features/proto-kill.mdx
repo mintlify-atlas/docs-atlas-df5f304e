@@ -1,0 +1,151 @@
+---
+title: "Proto Kill"
+description: "Jam any of 8 wireless protocols simultaneously using three NRF24L01 radios in constant-carrier mode, selectable via left/right navigation."
+---
+
+Proto Kill (`namespace ProtoKill` in `ism.cpp`) is a multi-protocol jammer that targets eight different wireless technologies. All three NRF24L01 modules run `startConstCarrier` at `RF24_PA_MAX` simultaneously, with random channel hopping within each protocol's defined channel set.
+
+<Warning>
+  Jamming radio communications is illegal in most jurisdictions, regardless of the protocol targeted. This includes Wi-Fi, Bluetooth, Zigbee, RC, and video transmission frequencies. Proto Kill is provided for educational and authorized security research purposes only. Never use this feature outside a shielded RF enclosure or without explicit regulatory authorization.
+</Warning>
+
+## Operation overview
+
+<Steps>
+  <Step title="Select a protocol">
+    Press **LEFT** or **RIGHT** to cycle through the 8 protocol modes. The OLED shows the protocol name with arrow icons and the current ACTIVE / DEACTIVE status.
+  </Step>
+  <Step title="Toggle active state">
+    Press **UP** to toggle between ACTIVE and DEACTIVE. When ACTIVE, all three radios initialize with `startConstCarrier(RF24_PA_MAX, channel)`. When DEACTIVE, all radios call `powerDown()`.
+  </Step>
+  <Step title="Channel hopping">
+    In the main loop, a random channel from the selected protocol's channel set is picked each iteration and applied to all three radios. This spreads interference across the protocol's full frequency allocation.
+  </Step>
+</Steps>
+
+## Protocol modes
+
+<AccordionGroup>
+  <Accordion title="Wi-Fi">
+    Targets 2.4GHz Wi-Fi channels 1–12 (mapped to NRF24 channel numbers).
+
+    ```
+    Channels: {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
+    ```
+
+    Covers the full 2.4GHz ISM band used by 802.11b/g/n. Wi-Fi channels 1, 6, and 11 are the non-overlapping US channels; this mode hops randomly across all 12.
+  </Accordion>
+  <Accordion title="BLE">
+    Targets the three BLE advertising channels defined in the Bluetooth specification.
+
+    ```
+    Channels: {2, 26, 80}
+    ```
+
+    BLE advertising uses channels 37, 38, and 39 (mapped to NRF24 channel numbers 2, 26, and 80). Jamming these prevents BLE devices from advertising or connecting.
+  </Accordion>
+  <Accordion title="Bluetooth">
+    Targets 21 classic Bluetooth frequency-hopping channels.
+
+    ```
+    Channels: {32, 34, 46, 48, 50, 52, 0, 1, 2, 4, 6, 8,
+               22, 24, 26, 28, 30, 74, 76, 78, 80}
+    ```
+
+    Classic Bluetooth uses a 79-channel frequency-hopping spread spectrum pattern. This mode randomly hops across 21 of those channels.
+  </Accordion>
+  <Accordion title="Zigbee">
+    Targets 4 Zigbee (IEEE 802.15.4) channels in the 2.4GHz band.
+
+    ```
+    Channels: {11, 15, 20, 25}
+    ```
+
+    Zigbee uses channels 11–26 in the 2.4GHz band. This mode targets 4 common channels: 11, 15, 20, and 25 (the channels least overlapping with Wi-Fi).
+  </Accordion>
+  <Accordion title="RC (remote control)">
+    Targets 4 channels used by 2.4GHz RC devices.
+
+    ```
+    Channels: {1, 3, 5, 7}
+    ```
+
+    Many consumer RC controllers (drones, cars, boats) use the 2.4GHz ISM band with proprietary protocols. This mode hops across 4 low channels commonly used by these devices.
+  </Accordion>
+  <Accordion title="Video TX">
+    Targets 3 channels used by 5.8GHz-mapped FPV video transmitters operating in the 2.4GHz range.
+
+    ```
+    Channels: {70, 75, 80}
+    ```
+
+    Some analog video transmitters operate near the upper 2.4GHz band. This mode targets the high-end NRF24 channel range where such devices may operate.
+  </Accordion>
+  <Accordion title="USB Wireless">
+    Targets 3 channels used by wireless USB dongles (mice, keyboards, headsets).
+
+    ```
+    Channels: {40, 50, 60}
+    ```
+
+    Wireless USB peripherals using proprietary 2.4GHz protocols (e.g., Logitech Unifying) typically operate in the middle of the NRF24 channel range.
+  </Accordion>
+  <Accordion title="NRF24">
+    Targets 3 channels specifically used by other NRF24L01-based devices.
+
+    ```
+    Channels: {76, 78, 79}
+    ```
+
+    Channel 76 is a common default for NRF24 modules. This mode disrupts other NRF24-based wireless devices such as custom RC links or proprietary sensor networks.
+  </Accordion>
+</AccordionGroup>
+
+## Protocol channel reference
+
+| Protocol | Channel set | Typical use case |
+|---|---|---|
+| Wi-Fi | 1–12 | 802.11b/g/n access points |
+| BLE | 2, 26, 80 | Bluetooth Low Energy advertising |
+| Bluetooth | 32, 34, 46, 48, 50, 52, 0–2, 4, 6, 8, 22–30, 74–80 | Classic Bluetooth piconets |
+| Zigbee | 11, 15, 20, 25 | Smart home sensors, IEEE 802.15.4 |
+| RC | 1, 3, 5, 7 | 2.4GHz remote-control vehicles and drones |
+| Video TX | 70, 75, 80 | FPV / analog video transmitters |
+| USB Wireless | 40, 50, 60 | Wireless mice, keyboards, USB dongles |
+| NRF24 | 76, 78, 79 | NRF24L01-based custom wireless devices |
+
+## Radio configuration
+
+When switching to ACTIVE mode, `initialize_MultiMode()` calls `configure_Radio()` for each radio with its fixed channel group:
+
+| Radio | Channel group | Purpose |
+|---|---|---|
+| RadioA | 2, 5, 8, 11 | Lower-band coverage |
+| RadioB | 26, 29, 32, 35 | Mid-band coverage |
+| RadioC | 80, 83, 86, 89 | Upper-band coverage |
+
+Each radio calls `startConstCarrier(RF24_PA_MAX, channel)` for every channel in its group during initialization. The `configureNrf()` helper (from `setting.h`) applies the base configuration shared with other NRF24 modes.
+
+During the main loop, the selected protocol's channel set is used for random hopping: all three radios are updated to the same randomly chosen channel each iteration.
+
+## OLED display
+
+The display shows:
+
+- Protocol name (e.g., `[WiFi]`, `[BLE]`, `[Zigbee]`)
+- Arrow icons on the left and right edges indicating LEFT/RIGHT navigation
+- Status label: `-ACTIVE-` or `-DEACTIVE-`
+
+## Button mapping
+
+| Button | Action |
+|---|---|
+| LEFT | Cycle to previous protocol |
+| RIGHT | Cycle to next protocol |
+| UP | Toggle ACTIVE / DEACTIVE |
+
+All buttons use interrupt-driven detection (`attachInterrupt`, `FALLING` edge) with a 200 ms debounce delay.
+
+<Note>
+  Running all three NRF24L01 radios simultaneously at `RF24_PA_MAX` draws significant current. If powered from a battery or USB power bank with limited output current, you may experience brownouts or resets. Use a power supply capable of at least 500 mA at 3.3V for stable operation in this mode.
+</Note>

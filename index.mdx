@@ -1,97 +1,77 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "nRFBox — All-in-One Wireless Toolkit"
+description: "An open-source ESP32-powered device for scanning, jamming, spoofing, and analyzing BLE, Wi-Fi, and 2.4GHz networks."
 ---
 
-## Setting up
+## Welcome to nRFBox
 
-Get your documentation site up and running in minutes.
+nRFBox is an open-source hardware toolkit built around the ESP32 and three NRF24L01 radio modules. It lets you explore, analyze, and interact with wireless protocols across the 2.4GHz spectrum — including BLE, Wi-Fi, Zigbee, and more — all from a compact handheld device with an OLED display.
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+<Warning>
+  nRFBox is intended for security research, authorized penetration testing, and educational use only. Using jamming or spoofing features against networks or devices you do not own is illegal in most jurisdictions. Always obtain proper authorization before testing.
+</Warning>
 
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Hardware Setup" icon="microchip" href="/hardware-setup">
+    Assemble your nRFBox: components, wiring, and PCB options
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Flash Firmware" icon="bolt" href="/flashing-firmware">
+    Upload the firmware to your ESP32 using Arduino IDE or pre-compiled binaries
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Features Overview" icon="list" href="/features/scanner-analyzer">
+    Explore all 10 operational modes built into nRFBox
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Pin Reference" icon="diagram-project" href="/configuration/pin-reference">
+    GPIO assignments for buttons, NRF24 modules, OLED, and NeoPixel
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What nRFBox can do
 
-Everything you need to create world-class documentation.
+<CardGroup cols={2}>
+  <Card title="Scanner & Analyzer" icon="signal" href="/features/scanner-analyzer">
+    Visualize 2.4GHz channel activity in real time on the OLED display
+  </Card>
+  <Card title="WLAN Jammer & Proto Kill" icon="ban" href="/features/jammers">
+    Disrupt Wi-Fi and multi-protocol wireless communication
+  </Card>
+  <Card title="BLE Tools" icon="bluetooth" href="/features/ble-tools">
+    Scan, jam, and spoof BLE devices including Apple and Samsung accessories
+  </Card>
+  <Card title="Wi-Fi Tools" icon="wifi" href="/features/wifi-tools">
+    Scan Wi-Fi networks and launch deauthentication attacks
+  </Card>
+</CardGroup>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Get started in three steps
 
-## Need inspiration?
+<Steps>
+  <Step title="Assemble the hardware">
+    Connect the ESP32 Wroom32U, three NRF24L01 modules, SSD1306 OLED, NeoPixel LED, and navigation buttons. See the [Hardware Setup](/hardware-setup) guide for the full wiring diagram.
+  </Step>
+  <Step title="Flash the firmware">
+    Use the Arduino IDE with ESP32 board support, or flash a pre-compiled `.bin` file directly using `esptool.py`. Full instructions are in the [Flashing Firmware](/flashing-firmware) guide.
+  </Step>
+  <Step title="Select a mode and start exploring">
+    Use the five navigation buttons to browse the icon grid menu and select one of the 10 operational modes. Press **Select** to enter a mode, and press **Select** again to return to the main menu.
+  </Step>
+</Steps>
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+## Functionality at a glance
+
+| Mode | Status | Reliability |
+|---|---|---|
+| Scanner | Stable | High |
+| Analyzer | Stable | High |
+| WLAN Jammer | Stable | High |
+| BLE Jammer | Stable | High |
+| BLE Spoofer | Stable | Low |
+| Sour Apple | Stable | Low |
+| Proto Kill | Stable | High |
+| Wi-Fi Scan | Stable | High |
+| BLE Scan | Stable | High |
+| Deauther | Stable | High |
+
+<Note>
+  Reliability varies by environment. Jamming effectiveness decreases with distance and depends on target device type. See [Known Limitations](/reference/known-limitations) for details.
+</Note>

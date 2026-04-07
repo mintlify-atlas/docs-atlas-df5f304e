@@ -1,0 +1,123 @@
+---
+title: "Scanner & Analyzer"
+description: "Visualize 2.4GHz channel activity across 64 channels using two distinct display modes: a scrolling waveform history graph and an instantaneous spectrum analyzer."
+---
+
+The nRFBox provides two passive monitoring modes for the 2.4GHz band. Both modes use a single NRF24L01 module (RadioA) in receive mode and display channel activity on the 128×64 OLED. Neither mode transmits — they are read-only.
+
+<CardGroup cols={2}>
+  <Card title="Scanner" icon="chart-line">
+    Scrolling waveform graph with persistent EEPROM history. Best for watching activity over time.
+  </Card>
+  <Card title="Analyzer" icon="chart-bar">
+    Instantaneous spectrum display with channel labels. Best for identifying active channels right now.
+  </Card>
+</CardGroup>
+
+## Scanner mode
+
+The Scanner namespace samples all 64 channels repeatedly and builds a scrolling bar chart that scrolls from right to left across the display. Previous scan data is saved to EEPROM and reloaded automatically at startup, so you can see a graph even before a new scan completes.
+
+### How it works
+
+<Steps>
+  <Step title="Sample all 64 channels">
+    For each of the 64 logical channels, the radio tunes to the corresponding physical frequency (`(128 * i) / CHANNELS`) and samples the received power detect register (`_NRF24_RPD`, address `0x09`) **50 times**. The count of detections is converted to a percentage: `channel[i] = (count * 100) / 50`.
+  </Step>
+  <Step title="Compute the peak and map to bar height">
+    The highest percentage across all 64 channels is taken as the normalization value (`norm`). The bar height for display is mapped from `[0, 64]` to `[0, 64]` using `drawHeight = map(norm, 0, 64, 0, 64)`.
+  </Step>
+  <Step title="Scroll the history array">
+    The `sensorArray[128]` buffer shifts right by one position on each update, and the new bar height is inserted at index 0. This produces the scrolling waveform effect across 127 pixel columns.
+  </Step>
+  <Step title="Render on OLED">
+    The OLED draws vertical bars from pixel column 127 (newest) back to column 0 (oldest). Border lines and tick marks every 10 pixels are drawn on the left and right edges. The current peak value is printed at the top-left as `[value]`.
+  </Step>
+  <Step title="Save to EEPROM">
+    Every 5 seconds (`saveInterval = 5000 ms`), the full 128-byte `sensorArray` is written to EEPROM starting at address 2 (`EEPROM_ADDRESS_SENSOR_ARRAY`). On next boot, `loadPreviousGraph()` reads it back so the graph is immediately populated.
+  </Step>
+</Steps>
+
+### Radio configuration (Scanner)
+
+The Scanner initializes its own SPI at 16 MHz and configures RadioA with direct register writes:
+
+| Register | Address | Value | Effect |
+|---|---|---|---|
+| `_NRF24_CONFIG` | `0x00` | `0x02` (power up bit) | Enables the radio |
+| `_NRF24_EN_AA` | `0x01` | `0x00` | Disables auto-acknowledgement |
+| `_NRF24_RF_SETUP` | `0x06` | `0x0F` | Sets data rate and PA level |
+
+### Navigation
+
+- **SELECT** — exits back to the main menu at any point during scanning or rendering
+
+---
+
+## Analyzer mode
+
+The Analyzer namespace displays an instantaneous bar chart of signal presence across all 128 NRF24 channels. Each display update begins with a 64-channel preliminary scan (`ScanChannels()`), then runs 200 full 128-channel passes using the `values[128]` array before rendering.
+
+### How it works
+
+<Steps>
+  <Step title="Preliminary 64-channel scan">
+    At the start of each display refresh, `ScanChannels()` scans 64 channels using `RadioA.setChannel((128 * i) / CHANNELS)` and reads the RPD register. The NeoPixel pulses purple during this phase.
+  </Step>
+  <Step title="Scan 128 channels per pass">
+    The inner loop iterates over all 128 channel indices (counting down from 127 to 0). For each channel it calls `setChannel(i)`, asserts CE high (`startListening`), waits 128 µs, then deasserts CE. The `carrierDetected()` function reads bit 0 of the `NRF24_RPD` register (`0x09`). A detection increments `values[i]`.
+  </Step>
+  <Step title="Run 200 passes">
+    The outer loop repeats 200 times, accumulating detections in `values[128]`. Both the outer and inner loops poll the SELECT button during execution and exit immediately if pressed.
+  </Step>
+  <Step title="Render the spectrum">
+    Each channel's bar is drawn as a vertical line. The bar top is calculated as `v = 63 - values[i] * 3`, clamped to 0, then `drawVLine(x, v - 10, 64 - v)` renders the bar downward from that point. Bar width is `SCREEN_WIDTH / N` (1 pixel wide at 128 channels).
+  </Step>
+  <Step title="Draw channel labels">
+    A fixed label string `"1...5...10...25..50...80...128"` is printed at `y=64` in `u8g2_font_ncenB08_tr` to provide frequency reference markers.
+  </Step>
+</Steps>
+
+### Radio configuration (Analyzer)
+
+The Analyzer uses SPI at 10 MHz and configures RadioA directly:
+
+| Register | Address | Value | Effect |
+|---|---|---|---|
+| `NRF24_CONFIG` | `0x00` | `0x02` | Power up |
+| `NRF24_EN_AA` | `0x01` | `0x00` | Auto-ack off |
+| `NRF24_RF_SETUP` | `0x06` | `0x03` | 1 Mbps, 0 dBm PA |
+
+### Navigation
+
+- **SELECT** — exits back to the main menu; the button is polled inside every inner loop iteration so response is near-immediate
+
+---
+
+## Comparison
+
+| Property | Scanner | Analyzer |
+|---|---|---|
+| Channels sampled | 64 logical | 128 physical |
+| Samples per channel | 50 | 200 passes × 1 bit per pass |
+| Display style | Scrolling waveform (time history) | Instantaneous bar spectrum |
+| EEPROM persistence | Yes — saved every 5 s, loaded at boot | No |
+| Channel labels on display | Peak value only | `1...5...10...25..50...80...128` |
+| SPI clock | 16 MHz | 10 MHz |
+| NeoPixel feedback | Pulses purple while scanning | Pulses purple while scanning |
+
+---
+
+## Notes
+
+<Note>
+  Both modes disable the ESP32 Bluetooth controller (`esp_bt_controller_deinit`) and Wi-Fi (`esp_wifi_stop` / `esp_wifi_deinit`) on setup to free SPI bandwidth for the NRF24 module.
+</Note>
+
+<Warning>
+  In high-interference environments (near Wi-Fi routers, Bluetooth peripherals, or microwave ovens), the RPD register may miss short bursts. The Scanner's 50-sample averaging reduces this, but short transmissions can still go undetected.
+</Warning>
+
+<Tip>
+  The Scanner's EEPROM persistence is useful for unattended logging: leave the device running in an area and come back to a populated graph showing activity over time.
+</Tip>

@@ -1,0 +1,172 @@
+---
+title: "Flashing firmware"
+description: "Upload nRFBox firmware to your ESP32 using Arduino IDE from source, or flash a pre-compiled binary directly with esptool."
+---
+
+Choose the method that suits your setup. Arduino IDE is best if you want to modify the source code. The pre-compiled binary method is faster and requires no IDE installation.
+
+<Tabs>
+  <Tab title="Arduino IDE (from source)">
+    ## Method 1: Arduino IDE
+
+    Build and upload the firmware directly from the nRFBox source code.
+
+    <Steps>
+      <Step title="Install Arduino IDE 2.x">
+        Download and install [Arduino IDE 2.x](https://www.arduino.cc/en/software) for your operating system. Version 2.x is recommended for its improved library manager and board support.
+      </Step>
+      <Step title="Add ESP32 board support">
+        1. Open **File → Preferences**.
+        2. In the **Additional boards manager URLs** field, add:
+           ```
+           https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+           ```
+        3. Open **Tools → Board → Boards Manager**, search for `esp32`, and install the **esp32 by Espressif Systems** package.
+      </Step>
+      <Step title="Select the target board">
+        Go to **Tools → Board → ESP32 Arduino** and select **ESP32 Dev Module** or **Node32S**. Either option works for the nRFBox hardware.
+      </Step>
+      <Step title="Install required libraries">
+        Open **Tools → Manage Libraries** and install each of the following:
+
+        | Library | Author | Purpose |
+        |---|---|---|
+        | RF24 | TMRh20 | NRF24L01 radio driver |
+        | U8g2 | oliver | SSD1306 OLED display |
+        | Adafruit NeoPixel | Adafruit | RGB status LED |
+
+        The BLE and Wi-Fi libraries (`BLEDevice`, `esp_wifi`, etc.) are included with the ESP32 board package and do not need to be installed separately.
+      </Step>
+      <Step title="Open the sketch">
+        Open `nRFBox/nRFBox.ino` from the cloned repository. Arduino IDE will load all companion files (`config.h`, `setting.h`, `setting.cpp`, etc.) automatically.
+      </Step>
+      <Step title="Configure upload settings">
+        Under the **Tools** menu, set:
+        - **Upload Speed**: `115200`
+        - **Port**: select the COM port or `/dev/ttyUSB*` device for your ESP32
+
+        <Tip>On Linux, you may need to add your user to the `dialout` group to access the serial port: `sudo usermod -aG dialout $USER`</Tip>
+      </Step>
+      <Step title="Upload">
+        Click the **Upload** button (right arrow icon) or press `Ctrl+U`. Arduino IDE will compile the sketch and flash it to the ESP32. The process takes about 30–60 seconds.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="Pre-compiled binary (esptool)">
+    ## Method 2: Pre-compiled binary
+
+    Flash one of the pre-built `.bin` files using `esptool.py`. No IDE or compilation required.
+
+    ### Available binary versions
+
+    | File | Version |
+    |---|---|
+    | `nRFBox_V2-0-0.ino.node32s.bin` | V2.0.0 |
+    | `nRFBox_V2-1-1.ino.node32s.bin` | V2.1.1 |
+    | `nRFBox_V2-2-1.ino.node32s.bin` | V2.2.1 |
+    | `nRFBox_V2-5-0.ino.node32s.bin` | V2.5.0 |
+    | `nRFBox_V2-7-2.ino.node32s.bin` | V2.7.2 (latest) |
+
+    All binaries are in the `Pre-compiled Bin/` directory of the repository and are built for the **Node32S** ESP32 board.
+
+    <Steps>
+      <Step title="Install esptool">
+        Install `esptool.py` via pip:
+
+        ```bash
+        pip install esptool
+        ```
+
+        Verify the installation:
+
+        ```bash
+        esptool.py version
+        ```
+      </Step>
+      <Step title="Connect the ESP32">
+        Connect your ESP32 to your computer via USB. Identify the serial port:
+
+        <CodeGroup>
+
+        ```bash Linux / macOS
+        ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null
+        ```
+
+        ```powershell Windows
+        # Open Device Manager and look under "Ports (COM & LPT)"
+        # Or run in PowerShell:
+        [System.IO.Ports.SerialPort]::getportnames()
+        ```
+
+        </CodeGroup>
+      </Step>
+      <Step title="Flash the binary">
+        Run `esptool.py` with the write_flash command. Replace the port with your actual device port.
+
+        <CodeGroup>
+
+        ```bash Linux / macOS
+        esptool.py --chip esp32 \
+          --port /dev/ttyUSB0 \
+          --baud 460800 \
+          write_flash 0x0 "nRFBox_V2-7-2.ino.node32s.bin"
+        ```
+
+        ```powershell Windows
+        esptool.py --chip esp32 `
+          --port COM3 `
+          --baud 460800 `
+          write_flash 0x0 "nRFBox_V2-7-2.ino.node32s.bin"
+        ```
+
+        </CodeGroup>
+
+        Flashing typically takes 15–30 seconds at 460800 baud.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## After flashing
+
+Once flashing completes:
+
+1. The ESP32 resets automatically (or press the **EN/Reset** button).
+2. The OLED displays the **nRFBox** splash screen with the version number for ~3 seconds.
+3. The main icon grid menu appears — use the directional buttons to navigate and **Select** to enter a mode.
+
+<Note>
+  The first boot after flashing reads brightness and NeoPixel settings from EEPROM. If EEPROM is uninitialized, the display may appear dim. Open **Settings** from the main menu and adjust brightness as needed.
+</Note>
+
+## Troubleshooting
+
+**esptool fails to connect or times out**
+
+Hold the **BOOT** button on your ESP32 when running the flash command, then release it once you see `Connecting...` in the terminal. Some ESP32 boards require this to enter download mode.
+
+**Port not found or permission denied (Linux)**
+
+Install the USB-to-serial driver for your board's chip:
+
+- **CP210x** (common on many dev boards): `sudo apt install linux-modules-extra-$(uname -r)`
+- **CH340/CH341**: driver usually included in the kernel; check `dmesg | grep tty` after plugging in
+
+Then ensure your user has serial port access:
+
+```bash
+sudo usermod -aG dialout $USER
+# Log out and back in for the group change to take effect
+```
+
+**"Wrong boot mode" error**
+
+Your ESP32 may be stuck in flash mode. Press the **EN/Reset** button to reboot normally after flashing completes. If the issue persists, check that GPIO0 (BOOT pin) is not held LOW by a connected peripheral.
+
+**Libraries not found (Arduino IDE)**
+
+Ensure you have installed all three libraries (RF24, U8g2, Adafruit NeoPixel) via the Library Manager and that the ESP32 board package version is 2.x or later. BLE headers (`BLEDevice.h`) are only available with the ESP32 package — they will not be found with a standard AVR install.
+
+<Warning>
+  Do not disconnect the USB cable or interrupt power during flashing. Interrupting a write can corrupt the firmware partition and may require using esptool to manually erase flash before re-flashing: `esptool.py --chip esp32 --port /dev/ttyUSB0 erase_flash`
+</Warning>

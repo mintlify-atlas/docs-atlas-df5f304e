@@ -1,0 +1,224 @@
+---
+title: "BLE Tools"
+description: "Scan for nearby BLE devices, jam BLE and classic Bluetooth channels, spoof 21 device types, and flood Apple proximity advertisements."
+---
+
+The nRFBox provides four BLE-related modes, all implemented in `bluetooth.cpp`. Two modes use the ESP32's built-in BLE stack; two use the NRF24L01 modules as constant-carrier jammers on BLE frequencies.
+
+<CardGroup cols={2}>
+  <Card title="BLE Scan" icon="magnifying-glass">
+    Passive and active BLE discovery. Lists up to 5 devices per page with RSSI. Tap for full device details.
+  </Card>
+  <Card title="BLE Jammer" icon="ban">
+    Constant-carrier jamming on BLE advertising channels (2, 26, 80) or 21 classic Bluetooth channels using all three NRF24 radios.
+  </Card>
+  <Card title="BLE Spoofer" icon="masks-theater">
+    Advertises as one of 21 device types — Apple AirPods/Beats, Samsung Galaxy Watch, or Google Fast Pair — with a randomized MAC address.
+  </Card>
+  <Card title="Sour Apple" icon="apple-whole">
+    Floods the air with Apple proximity BLE advertisements at 40 ms intervals and maximum TX power, triggering pairing popups on nearby Apple devices.
+  </Card>
+</CardGroup>
+
+---
+
+## BLE Scan
+
+`namespace BleScan` uses the ESP32's built-in BLE stack (`BLEDevice`, `BLEScan`).
+
+### Setup
+
+<Steps>
+  <Step title="Initialize BLE">
+    `BLEDevice::init("")` starts the BLE stack. `scan->setActiveScan(true)` enables active scanning so the device requests scan response packets.
+  </Step>
+  <Step title="Animate the startup screen">
+    Three cycles of a dot animation (`Scanning BLE...`) play on the OLED while the scan runs. The NeoPixel flashes white once per dot.
+  </Step>
+  <Step title="Start a 5-second scan">
+    `scan->start(5, false)` triggers a 5-second BLE scan (`scanDuration = 5000 ms`). Results are fetched with `scan->getResults()` after the duration elapses.
+  </Step>
+</Steps>
+
+### List view
+
+After the scan completes, up to 5 devices are shown per page. Each entry displays:
+
+- Device name (first 7 characters), or `"No Name"` if the advertisement contains no name
+- RSSI value
+
+Navigate with **UP** / **DOWN**. The selected device is marked with `>`.
+
+### Detail view
+
+Press **RIGHT** to enter the detail view for the selected device. The display shows:
+
+- `Name:` — full device name
+- `Addr:` — MAC address string
+- `RSSI:` — signal strength in dBm
+
+Press **LEFT** to return to the list.
+
+---
+
+## BLE Jammer
+
+`namespace BleJammer` uses all three NRF24L01 radios in `startConstCarrier` mode to saturate BLE or classic Bluetooth frequencies.
+
+### Modes
+
+Press **UP** to cycle through three states:
+
+| State | Targets | Description |
+|---|---|---|
+| Deactive | — | All radios powered down |
+| BLE | Channels 2, 26, 80 | Jams BLE advertising channels; random channel selected each loop |
+| Bluetooth | 21 channels | Jams classic Bluetooth hop channels; random channel selected each loop |
+
+Classic Bluetooth channel set:
+```
+{32, 34, 46, 48, 50, 52, 0, 1, 2, 4, 6, 8, 22, 24, 26, 28, 30, 74, 76, 78, 80}
+```
+
+### Radio initialization
+
+When switching to BLE or Bluetooth mode, all three radios are initialized using fixed channel groups:
+
+| Radio | Channel group |
+|---|---|
+| RadioA | 2, 5, 8, 11 |
+| RadioB | 26, 29, 32, 35 |
+| RadioC | 80, 83, 86, 89 |
+
+Each radio calls `startConstCarrier(RF24_PA_MAX, channel)` for each channel in its group. During the loop, a random channel from the active protocol's channel set is selected and applied to all three radios simultaneously.
+
+### OLED display
+
+The display shows:
+
+- `Mode: [BLE | Bluetooth | Deactive]`
+- `Radio 1:` — Active / Inactive (based on `RadioA.isChipConnected()`)
+- `Radio 2:` — Active / Inactive
+- `Radio 3:` — Active / Inactive
+
+---
+
+## BLE Spoofer
+
+`namespace Spoofer` advertises BLE packets that impersonate real devices. The MAC address is randomized on each advertisement. TX power is set to `ESP_PWR_LVL_P9` (+9 dBm).
+
+### Supported devices
+
+<Tabs>
+  <Tab title="Apple (17 models)">
+    All Apple devices use 31-byte manufacturer-specific advertisement packets with company ID `0x004C`:
+
+    - AirPods
+    - AirPods Pro
+    - AirPods Max
+    - AirPods Gen 2
+    - AirPods Gen 3
+    - AirPods Pro Gen 2
+    - PowerBeats
+    - PowerBeats Pro
+    - Beats Solo Pro
+    - Beats Studio Buds
+    - Beats Flex
+    - Beats X
+    - Beats Solo 3
+    - Beats Studio 3
+    - Beats Studio Pro
+    - Beats Fit Pro
+    - Beats Studio Buds+
+  </Tab>
+  <Tab title="Samsung (3 models)">
+    Samsung devices use 15-byte packets with company ID `0x0075`. The last byte identifies the model:
+
+    | Model | Identifier byte |
+    |---|---|
+    | Galaxy Watch 4 | `0x01` |
+    | Galaxy Watch 5 | `0x02` |
+    | Galaxy Watch 6 | `0x03` |
+  </Tab>
+  <Tab title="Google (1 model)">
+    Google Smart Ctrl uses a 14-byte Fast Pair advertisement with service UUID `0xFE2C`. The TX power byte is randomized on each advertisement.
+  </Tab>
+</Tabs>
+
+### Menu navigation
+
+The Spoofer has a three-item menu:
+
+| Menu item | Options | Navigation |
+|---|---|---|
+| Device | All 21 device names | LEFT / RIGHT |
+| Adv Type | IND, D-HIGH, SCAN, NONCONN, D-LOW | LEFT / RIGHT |
+| Advertising | Active / Disable | LEFT / RIGHT |
+
+Use **UP** / **DOWN** to move between menu items.
+
+### NeoPixel feedback
+
+| Device category | NeoPixel color |
+|---|---|
+| Apple (types 1–17) | Red |
+| Samsung (types 18–20) | Purple |
+| Google (type 21) | Green |
+| Advertising off | Off |
+
+---
+
+## Sour Apple
+
+`namespace SourApple` continuously broadcasts Apple proximity BLE advertisements at maximum power to trigger pairing popups on nearby iPhones, iPads, and Macs.
+
+### Packet structure
+
+Each packet is a 17-byte manufacturer-specific advertisement:
+
+| Byte | Value | Meaning |
+|---|---|---|
+| 0 | `0x10` | Packet length (16) |
+| 1 | `0xFF` | Type: Manufacturer Specific |
+| 2 | `0x4C` | Company ID: Apple, Inc. (low byte) |
+| 3 | `0x00` | Company ID: Apple, Inc. (high byte) |
+| 4 | `0x0F` | Proximity pairing type |
+| 5 | `0x05` | Length |
+| 6 | `0xC1` | Action flags |
+| 7 | random | Action type (selected from 11 values) |
+| 8–10 | random | Authentication tag (`esp_fill_random`) |
+| 11–12 | `0x00` | Reserved |
+| 13 | `0x10` | Type field |
+| 14–16 | random | Additional random bytes |
+
+The action type byte is chosen randomly from:
+
+```cpp
+const uint8_t types[] = { 0x27, 0x09, 0x02, 0x1e, 0x2b, 0x2d, 0x2f, 0x01, 0x06, 0x20, 0xc0 };
+```
+
+### Transmission parameters
+
+| Parameter | Value |
+|---|---|
+| TX power | `ESP_PWR_LVL_P9` (+9 dBm) — maximum |
+| Advertisement interval | Min `0x20` / Max `0x20` (40 ms) |
+| MAC address | Randomized per advertisement; first byte OR'd with `0xF0` |
+| Loop delay | 40 ms between advertisements |
+
+### OLED output
+
+The display scrolls up to 8 lines showing packet data for each advertisement:
+
+```
+1: 0xff,0x4c00,0x27
+2: 0xff,0x4c00,0x09
+3: 0xff,0x4c00,0x2b
+...
+```
+
+Each line shows: advertisement type byte, company ID, and the randomly chosen action type.
+
+<Warning>
+  Sour Apple floods nearby Apple devices with continuous pairing popups, which can be disruptive and annoying. This feature is intended for controlled testing environments only. Using it in public is both illegal and harmful.
+</Warning>

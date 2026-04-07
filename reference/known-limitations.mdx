@@ -1,0 +1,88 @@
+---
+title: 'Known limitations'
+description: 'Hardware and software limitations of nRFBox, including power constraints, radio range, BLE compatibility, and GPIO conflicts.'
+---
+
+<AccordionGroup>
+
+  <Accordion title="Power limitations">
+
+    <Warning>
+      Running all three NRF24 modules simultaneously at `RF24_PA_MAX` can exceed the onboard power regulator's capacity.
+
+      **Symptoms:** intermittent failures, module disconnects, or device resets.
+
+      **Recommendation:** use a stable 3.3V regulator with at least 500mA capacity and add decoupling capacitors (100µF + 100nF) near each NRF24 VCC/GND pair.
+    </Warning>
+
+  </Accordion>
+
+  <Accordion title="Jamming range">
+
+    <Note>
+      Effective jamming range is short — typically 1–5 meters depending on the environment.
+
+      - Signal strength weakens with distance; reliable disruption beyond ~10 meters is unlikely.
+      - High-interference environments (crowded 2.4GHz spectrum) further reduce effectiveness.
+    </Note>
+
+  </Accordion>
+
+  <Accordion title="BLE Spoofer reliability">
+
+    <Note>
+      BLE Spoofer is rated **Low** reliability. Not all target devices respond to spoofed BLE advertisements.
+
+      - Compatibility varies by iOS/Android version and device model.
+      - Best used in controlled testing scenarios rather than general deployment.
+    </Note>
+
+  </Accordion>
+
+  <Accordion title="Sour Apple attack">
+
+    <Note>
+      The Sour Apple attack's effectiveness depends on the iOS version and device settings.
+
+      - Newer iOS versions (17+) include partial mitigations against BLE advertisement flooding.
+      - The attack requires close physical proximity to target devices.
+    </Note>
+
+  </Accordion>
+
+  <Accordion title="Scanner and Analyzer missed detections">
+
+    <Note>
+      In high-interference 2.4GHz environments, fast-switching signals may not be captured.
+
+      - The NRF24L01 RPD (Received Power Detector) register only detects signals above **-64 dBm**.
+      - Signals below this threshold are invisible to the scanner and analyzer.
+    </Note>
+
+  </Accordion>
+
+  <Accordion title="NRF24 Radio A and SD card GPIO 5 conflict">
+
+    <Note>
+      Radio A CE pin and the SD card CS pin both use **GPIO 5**.
+
+      - Radio A cannot be active at the same time as SD card access.
+      - The firmware handles this automatically: SD access only occurs during the "Update Firmware" option in the Settings menu, which powers down all three radios first via `setRadiosNeutralState()`.
+      - Under normal operation this conflict is not exposed to the user.
+    </Note>
+
+  </Accordion>
+
+  <Accordion title="BLE and WiFi mutual exclusion">
+
+    <Note>
+      The ESP32's BLE and WiFi stacks share the same underlying radio hardware and cannot run concurrently.
+
+      - Modes that use BLE (BLE Jammer, BLE Spoofer, Sour Apple, BLE Scan) call `esp_wifi_stop()` on startup.
+      - Modes that use WiFi (WiFi Scan, Deauther) cannot simultaneously run BLE functions.
+      - Switching between BLE and WiFi modes requires a mode change through the main menu, which reinitialises the appropriate stack.
+    </Note>
+
+  </Accordion>
+
+</AccordionGroup>

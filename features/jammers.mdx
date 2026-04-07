@@ -1,0 +1,79 @@
+---
+title: "WLAN Jammer"
+description: "Disrupt 2.4GHz Wi-Fi channels using three simultaneous NRF24L01 radios with configurable channel, PA level, and data rate."
+---
+
+The WLAN Jammer (`namespace Jammer` in `ism.cpp`) uses all three NRF24L01 modules (RadioA, RadioB, RadioC) to transmit an alternating `0xAA/0x55` pattern across 22 channels centered on a selected Wi-Fi channel. An on-screen menu lets you configure the target channel, transmit power, data rate, and toggle jamming on or off.
+
+<Warning>
+  Transmitting on Wi-Fi frequencies without authorization is illegal in most jurisdictions under radio communications law (e.g., the FCC Part 97 / Part 15 rules in the US, the Radio Equipment Directive in the EU). Only use this feature on networks and devices you own and control in a shielded RF environment or with proper authorization.
+</Warning>
+
+## On-screen menu
+
+The display shows four configurable parameters. Use **UP** / **DOWN** to move the cursor (`>`) between items, and **LEFT** / **RIGHT** to change the selected value.
+
+| Menu item | Options | Default |
+|---|---|---|
+| Channel | 1 – 14 (Wi-Fi channels) | 1 |
+| PA Level | MIN / LOW / HIGH / MAX | MIN |
+| Data Rate | 250KBPS / 1MBPS / 2MBPS | 250KBPS |
+| Jamming | Active / Disable | Disable |
+
+To start jamming, navigate to **Jamming** and press **RIGHT**. The NeoPixel turns red. Press **RIGHT** or **LEFT** again to stop.
+
+## Jamming method
+
+When jamming is active, the `jammer()` function iterates over 22 consecutive channels starting from `(channels * 5) + 1` up to `(channels * 5) + 22`. All three radios are set to the same channel on each iteration, and each transmits the following 16-byte alternating pattern:
+
+```cpp
+const char text[] = { 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55,
+                      0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55 };
+```
+
+This covers the approximate 22 MHz bandwidth of a Wi-Fi channel centered on the selected channel number. The loop continues as long as `jamming == true`.
+
+## Radio configuration
+
+All three radios are configured identically by `configure()` before jamming starts:
+
+| Parameter | Value | RF24 call |
+|---|---|---|
+| Writing pipe address | `0xFFFFFFFFFF` | `openWritingPipe` |
+| Auto-acknowledgement | Off | `setAutoAck(false)` |
+| Retries | 0 delay, 0 count | `setRetries(0, 0)` |
+| PA level | MAX | `setPALevel(RF24_PA_MAX, true)` |
+| Data rate | 2 Mbps (initial) | `setDataRate(RF24_2MBPS)` |
+| CRC | Disabled | `setCRCLength(RF24_CRC_DISABLED)` |
+
+When you change PA Level or Data Rate via the menu, `setRadioParameters()` applies the new settings to all three radios immediately using the `RF24_PA_*` and `RF24_*MBPS` constants.
+
+<Note>
+  The `configure()` function called during jammer setup always initializes all three radios at `RF24_PA_MAX` and `RF24_2MBPS` regardless of the menu display. The menu values (starting at MIN / 250KBPS) represent what will be applied when you change a value — pressing RIGHT immediately calls `setRadioParameters()` with the displayed setting.
+</Note>
+
+## Button mapping
+
+| Button | Action |
+|---|---|
+| UP | Move cursor up in menu |
+| DOWN | Move cursor down in menu |
+| RIGHT | Increment selected value / toggle jamming on |
+| LEFT | Decrement selected value / toggle jamming off |
+
+<Note>
+  The RIGHT and LEFT buttons are also polled inside the `jammer()` loop itself, so pressing them while jamming is active will stop the jammer without waiting for the next loop iteration.
+</Note>
+
+## NeoPixel feedback
+
+| State | NeoPixel color |
+|---|---|
+| Jamming active | Red |
+| Jamming stopped | Off |
+
+## Effectiveness
+
+<Note>
+  Jamming effectiveness decreases with distance. At close range (under 1 m) with PA MAX and 2 Mbps, the pattern reliably saturates the target channel. Beyond a few meters, 802.11 devices may still connect using OFDM error correction, especially on modern Wi-Fi 5/6 hardware.
+</Note>

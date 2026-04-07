@@ -1,0 +1,85 @@
+{
+  "projectType": "general",
+  "projectName": "nRFBox",
+  "projectDescription": "An open-source ESP32-powered wireless toolkit for scanning, jamming, spoofing, and attacking BLE, Wi-Fi, and 2.4GHz networks using NRF24L01 modules.",
+  "theme": "aspen",
+  "primaryColor": "#fc0434",
+  "lightColor": "#fc7494",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "hardware-setup",
+              "flashing-firmware"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/scanner-analyzer",
+              "features/jammers",
+              "features/ble-tools",
+              "features/wifi-tools",
+              "features/proto-kill"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/pin-reference",
+              "configuration/settings-menu",
+              "configuration/firmware-update"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/hardware-bom",
+              "reference/known-limitations",
+              "reference/changelog"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "2.4GHz channel scanner with OLED spectrum display",
+    "Signal analyzer with real-time graphing via NRF24L01",
+    "WLAN jammer with configurable channel, PA level, and data rate",
+    "BLE jammer targeting BLE and classic Bluetooth channels",
+    "BLE spoofer simulating Apple (AirPods, Beats), Samsung Galaxy Watch, and Google devices",
+    "Sour Apple attack — spams fake Apple BLE proximity advertisements",
+    "Proto Kill mode for jamming WiFi, BLE, Bluetooth, Zigbee, RC, Video TX, USB wireless, and NRF24",
+    "Wi-Fi scanner listing nearby networks with SSID, BSSID, RSSI, and channel",
+    "BLE scanner listing nearby BLE devices with name and RSSI",
+    "Wi-Fi deauthentication attack sending raw 802.11 deauth frames",
+    "SD card-based OTA firmware update",
+    "NeoPixel status LED with per-mode color feedback",
+    "OLED display with icon grid menu navigation"
+  ],
+  "publicApiSurface": [
+    "Scanner::scannerSetup() / Scanner::scannerLoop()",
+    "Analyzer::analyzerSetup() / Analyzer::analyzerLoop()",
+    "Jammer::jammerSetup() / Jammer::jammerLoop()",
+    "BleJammer::blejammerSetup() / BleJammer::blejammerLoop()",
+    "Spoofer::spooferSetup() / Spoofer::spooferLoop()",
+    "SourApple::sourappleSetup() / SourApple::sourappleLoop()",
+    "ProtoKill::blackoutSetup() / ProtoKill::blackoutLoop()",
+    "BleScan::blescanSetup() / BleScan::blescanLoop()",
+    "WifiScan::wifiscanSetup() / WifiScan::wifiscanLoop()",
+    "Deauther::deautherSetup() / Deauther::deautherLoop()",
+    "Setting::settingSetup() / Setting::settingLoop()",
+    "initAllRadios()",
+    "configureNrf(RF24 &radio)",
+    "setNeoPixelColour(const std::string& colour)",
+    "BUTTON_UP_PIN (GPIO 26), BUTTON_DOWN_PIN (GPIO 32), BUTTON_SELECT_PIN (GPIO 33), BTN_PIN_LEFT (GPIO 25), BTN_PIN_RIGHT (GPIO 27)",
+    "NRF_CE_PIN_A/B/C, NRF_CSN_PIN_A/B/C — three NRF24L01 radio module SPI pins"
+  ]
+}

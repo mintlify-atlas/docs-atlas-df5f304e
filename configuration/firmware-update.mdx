@@ -1,0 +1,64 @@
+---
+title: "Firmware update"
+description: "Update nRFBox firmware over SD card without a USB connection."
+---
+
+nRFBox supports OTA-style firmware updates via a MicroSD card. The update is performed entirely on-device through the **Settings** menu — no USB cable or flashing tool required.
+
+## Requirements
+
+- MicroSD card formatted as FAT32
+- Firmware binary named exactly `firmware.bin` (the device looks for `/firmware.bin` as defined by `FIRMWARE_FILE` in `config.h`)
+- SD card inserted into the nRFBox SD slot (CS = GPIO 5)
+
+## Update procedure
+
+<Steps>
+  <Step title="Download the firmware binary">
+    Download the latest pre-compiled binary from the [nRFBox GitHub releases page](https://github.com/cifertech/nRFBox/releases) (e.g., `nRFBox_V2-7-2.ino.node32s.bin`).
+  </Step>
+  <Step title="Rename the file">
+    Rename the downloaded file to `firmware.bin`. The filename must be exact — the device will not find any other name.
+  </Step>
+  <Step title="Copy to SD card">
+    Copy `firmware.bin` to the **root directory** of a FAT32-formatted MicroSD card. Do not place it inside a folder.
+  </Step>
+  <Step title="Insert the SD card">
+    Insert the MicroSD card into the nRFBox SD slot while the device is powered on.
+  </Step>
+  <Step title="Open Settings">
+    From the main menu, navigate to the **Setting** icon (last item) and press `BUTTON_SELECT_PIN` (GPIO 33) to enter.
+  </Step>
+  <Step title="Select Update Firmware">
+    Navigate down to **Update Firmware** using `BUTTON_DOWN_PIN`, then press `BTN_PIN_RIGHT` (GPIO 27) to start the update.
+  </Step>
+  <Step title="Wait for completion">
+    The display shows `Updating Firmware.` followed by a status message. On success the display shows `[ Update Success! ]` and the device restarts automatically.
+  </Step>
+</Steps>
+
+## OLED status messages
+
+The `updateFirmware()` function in `setting.cpp` displays one of the following messages depending on the outcome:
+
+| Message | Meaning |
+|---|---|
+| `[ SD Init Failed ]` | SD card not detected or not formatted as FAT32 |
+| `[ File Not Found ]` | `firmware.bin` not present in the root of the SD card |
+| `[ Open Failed ]` | File exists but could not be opened |
+| `[ Wait a Moment ]` | File opened successfully, update stream starting |
+| `[ Update Init Failed ]` | Not enough flash space to begin the update |
+| `[ Update Failed ]` | Write error occurred during the update stream |
+| `[ Update Success! ]` | Update written successfully — device restarts |
+
+## Shared pin note
+
+<Warning>
+The SD card CS pin (GPIO 5) is shared with NRF Radio A CE. The SD card interface is only initialized inside `updateFirmware()` when you select **Update Firmware** from the Settings menu. Do not attempt a firmware update while a radio-based mode (Scanner, Jammer, etc.) is active.
+</Warning>
+
+## Safety warning
+
+<Warning>
+Do not power off nRFBox during a firmware update. If the update is interrupted, the flash may be left in a partially written state and the device may fail to boot. In that case you will need to reflash the firmware via USB using the Arduino IDE or `esptool`.
+</Warning>

@@ -1,0 +1,70 @@
+---
+title: 'Hardware BOM'
+description: 'Bill of materials for building nRFBox — core components, software libraries, and PCB fabrication files.'
+---
+
+## Core components
+
+| Component | Quantity | Notes |
+|---|---|---|
+| ESP32 Wroom32U | 1 | With external antenna connector |
+| NRF24L01+ module | 3 | 2.4GHz transceiver modules |
+| SSD1306 OLED display | 1 | 128x64 pixels, I2C interface |
+| NeoPixel / WS2812B LED | 1 | Single RGB LED, GPIO 14 |
+| Push buttons (tactile) | 5 | UP, DOWN, LEFT, RIGHT, SELECT |
+| MicroSD card slot | 1 | Optional, for OTA firmware update |
+| USB-to-Serial adapter | 1 | For initial firmware flashing (CP2102 or CH340) |
+
+## Pin assignments
+
+The firmware defines the following GPIO assignments in `config.h`:
+
+| Signal | GPIO |
+|---|---|
+| Button UP | 26 |
+| Button DOWN | 32 |
+| Button LEFT | 25 |
+| Button RIGHT | 27 |
+| Button SELECT | 33 |
+| SD card CS | 5 |
+| Radio A CE | 5 |
+| Radio A CSN | 17 |
+| Radio B CE | 16 |
+| Radio B CSN | 4 |
+| Radio C CE | 15 |
+| Radio C CSN | 2 |
+| NeoPixel data | 14 |
+
+<Note>
+Radio A CE and SD card CS share GPIO 5. The firmware handles this conflict by powering down all radios before any SD card access. See [Known Limitations](/reference/known-limitations) for details.
+</Note>
+
+## Software libraries
+
+The following libraries are required to compile the firmware in Arduino IDE:
+
+| Library | Purpose |
+|---|---|
+| RF24 | NRF24L01 radio module driver |
+| U8g2lib | SSD1306 OLED display driver |
+| Adafruit NeoPixel | NeoPixel/WS2812B LED control |
+| ESP32 BLE Arduino | BLE scanning and advertising (built into ESP32 board package) |
+| ESP32 Arduino Core | WiFi, esp\_wifi, EEPROM, Update, SD, SPI, Wire |
+
+## PCB files
+
+Gerber files and assembly data are located in the `PCB/` directory of the repository:
+
+| File | Description |
+|---|---|
+| `Gerber.zip` | PCB fabrication files, ready for upload to a PCB fab |
+| `BOM.xlsx` | Component list with values and footprints |
+| `CPL.csv` | Component placement list for SMT assembly service |
+
+<Note>
+`Gerber.zip` can be uploaded directly to JLCPCB, PCBWay, or similar PCB fabricators. Use `BOM.xlsx` and `CPL.csv` when ordering SMT assembly.
+</Note>
+
+<Note>
+Use the standard NRF24L01+ modules rather than PA+LNA variants unless you have proper power regulation in place. PA+LNA modules draw significantly more current and can cause instability with the onboard regulator. See [Known Limitations — Power](/reference/known-limitations) for more details.
+</Note>

@@ -1,0 +1,95 @@
+---
+title: "Pin Reference"
+description: "Complete GPIO pin assignments for nRFBox — buttons, radio modules, display, LED, and SD card."
+---
+
+This page documents every GPIO assignment defined in `config.h`. Use it as a reference when assembling hardware, debugging connections, or porting to a custom board.
+
+## Navigation buttons
+
+All five buttons are configured as `INPUT_PULLUP` and read as active LOW — a pressed button reads `LOW`.
+
+| Pin name | GPIO | Function |
+|---|---|---|
+| `BUTTON_UP_PIN` | 26 | Navigate up / move mode selection up |
+| `BUTTON_SELECT_PIN` | 33 | Select / confirm / exit active mode |
+| `BUTTON_DOWN_PIN` | 32 | Navigate down |
+| `BTN_PIN_RIGHT` | 27 | Navigate right / increase value |
+| `BTN_PIN_LEFT` | 25 | Navigate left / decrease value |
+
+## NRF24L01 radio modules
+
+Three NRF24L01+ modules share the ESP32 hardware SPI bus (SCK = GPIO 18, MISO = GPIO 19, MOSI = GPIO 23). Each module has its own CE and CSN pins.
+
+| Module | CE pin | CSN pin |
+|---|---|---|
+| Radio A | GPIO 5 | GPIO 17 |
+| Radio B | GPIO 16 | GPIO 4 |
+| Radio C | GPIO 15 | GPIO 2 |
+
+<Warning>
+Radio A CE (GPIO 5) is shared with the SD card CS pin. The SD card is only used during firmware update from the Settings menu, not during active radio operation. Never use both at the same time.
+</Warning>
+
+## Display and indicators
+
+| Component | Interface | Pins |
+|---|---|---|
+| SSD1306 OLED 128×64 | I2C (hardware) | Default ESP32 SDA/SCL |
+| NeoPixel LED | Single-wire | GPIO 14 |
+
+The NeoPixel is a single WS2812B-compatible LED driven by the `Adafruit_NeoPixel` library (`pixels(1, 14, NEO_GRB + NEO_KHZ800)`). Its color indicates the currently active mode.
+
+### NeoPixel color meanings
+
+| Color | Meaning |
+|---|---|
+| Red | WLAN jamming active / Apple BLE spoofing |
+| Purple | BLE scanning / 2.4GHz scanning |
+| White | Scanning in progress |
+| Green | Google device spoofing |
+| Off | Idle / inactive / deauth attack running |
+
+<Note>
+  The Deauther mode calls `setNeoPixelColour("orange")`, but the `neopixel.cpp` implementation has no `"orange"` case — the LED stays off during deauth attacks. The valid named colors are: `red`, `green`, `blue`, `yellow`, `purple`, `cyan`, `white`, and `null` (off).
+</Note>
+
+The LED can be disabled entirely from the [Settings menu](/configuration/settings-menu). When disabled, `neoPixelActive` is `false` and no color is ever written to the pixel.
+
+## SD card (firmware update)
+
+The SD card slot is optional and is only used during OTA firmware update via the Settings menu.
+
+| Signal | GPIO |
+|---|---|
+| CS | 5 |
+| SCK | 18 |
+| MOSI | 23 |
+| MISO | 19 |
+
+<Note>
+SD card SCK, MOSI, and MISO are shared with the SPI bus used by the radio modules. CS (GPIO 5) is also shared with Radio A CE. The SD card interface is only initialized inside `updateFirmware()` — it is not active during normal operation.
+</Note>
+
+## Pin definitions from `config.h`
+
+```cpp
+// Push Buttons-specific Pins
+#define BUTTON_UP_PIN       26
+#define BUTTON_SELECT_PIN   33
+#define BUTTON_DOWN_PIN     32
+#define BTN_PIN_RIGHT       27
+#define BTN_PIN_LEFT        25
+
+// SD Card Slot-specific Pins
+#define SD_CS_PIN 5
+#define FIRMWARE_FILE "/firmware.bin"
+
+// nRF24-specific Pins
+#define NRF_CE_PIN_A    5
+#define NRF_CSN_PIN_A   17
+#define NRF_CE_PIN_B    16
+#define NRF_CSN_PIN_B   4
+#define NRF_CE_PIN_C    15
+#define NRF_CSN_PIN_C   2
+```

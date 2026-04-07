@@ -1,0 +1,65 @@
+---
+title: "Settings menu"
+description: "Configure NeoPixel, OLED brightness, and firmware updates from the on-device settings screen."
+---
+
+The Settings screen is the last item in the main menu (the gear icon, labeled **Setting**). Press `BUTTON_SELECT_PIN` (GPIO 33) to enter it from the main menu.
+
+## Available options
+
+The settings screen shows three options. Navigate with **UP** / **DOWN** and apply changes with **RIGHT**.
+
+| # | Option | Description |
+|---|---|---|
+| 0 | **NeoPixel** | Enable or disable the status LED |
+| 1 | **Brightness** | Adjust OLED display brightness |
+| 2 | **Update Firmware** | Flash new firmware from SD card |
+
+### NeoPixel
+
+Toggles the NeoPixel LED on or off. When disabled, no color is ever written to the pixel regardless of which mode is active.
+
+The current state (`Enabled` / `Disabled`) is displayed on the right side of the option row. Pressing **RIGHT** flips the value and immediately commits it to EEPROM so it persists across power cycles.
+
+### Brightness
+
+Increases OLED contrast in 10% increments: 0% → 10% → … → 100% → 0% (wraps around).
+
+The current percentage is shown on the right side of the option row. Pressing **RIGHT** increments the value, calls `u8g2.setContrast()`, and saves the raw 0–255 value to EEPROM. The change is visible immediately on the display.
+
+### Update firmware
+
+Launches the SD card OTA update flow. See [Firmware update](/configuration/firmware-update) for the full procedure and error states.
+
+## Button mapping inside settings
+
+| Button | GPIO | Action |
+|---|---|---|
+| `BUTTON_UP_PIN` | 26 | Move to previous option |
+| `BUTTON_DOWN_PIN` | 32 | Move to next option |
+| `BTN_PIN_RIGHT` | 27 | Toggle / apply selected option |
+| `BUTTON_SELECT_PIN` | 33 | Exit to main menu (handled by main loop) |
+
+<Note>
+The Settings screen only registers UP, DOWN, and RIGHT buttons internally (`settingSetup()` configures `BUTTON_UP_PIN`, `BUTTON_DOWN_PIN`, and `BTN_PIN_RIGHT`). The SELECT button exit is handled by the outer main loop, which polls `BUTTON_SELECT_PIN` and returns to the menu grid when pressed.
+</Note>
+
+## EEPROM storage
+
+Settings are stored in ESP32 EEPROM so they survive power loss. The EEPROM is initialized with a 512-byte allocation (`EEPROM.begin(512)`).
+
+```cpp
+#define EEPROM_ADDRESS_NEOPIXEL   0
+#define EEPROM_ADDRESS_BRIGHTNESS 1
+```
+
+| Address | Value stored | Type |
+|---|---|---|
+| 0 | NeoPixel enabled flag (`0` = off, `1` = on) | `uint8_t` |
+| 1 | OLED brightness (0–255, maps to 0–100%) | `uint8_t` |
+
+Both values are read back at boot — in `neopixelSetup()` (address 0) and in the main `setup()` function (address 1) — before the display is initialized, so the saved brightness takes effect immediately on startup.
+
+<Note>
+If the brightness EEPROM value is above 255 (e.g., uninitialized flash reads as `0xFF`), it is clamped to 128 by `settingSetup()`.
+</Note>
